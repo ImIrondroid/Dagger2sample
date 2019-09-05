@@ -5,147 +5,54 @@ Dagger는 DI Framework 입니다. DI란 외부에서 의존 객체를 대신 생
 DI를 위해서는 객체를 생성하고 넘겨주는 일을 외부에 대신해줄 수 있는 무언가가 필요합니다. 이것이 DI Framework가 하는 일입니다.
 외부에서 넘겨주는것을 Dagger에서는 Component와 Module이라고 부릅니다. 
 
-DI가 필요한이유 :
+DI가 필요한이유  :
+의존성 파라미터를 생성자에 작성하지 않아도 되므로 보일러 플레이트 코드를 많이 줄일 수 있습니다. 개발을 진행할때 보일러 플레이트 코드를 줄이는 것만으로도 유연한 프로그래밍이 가능합니다.
 
-의존성 파라미터를 생성자에 작성하지 않아도 되므로 보일러 플레이트 코드를 많이 줄일 수 있습니다. 개보일러 플레이트 코드를 줄이는 것만으로도 유연한 프로그래밍이 가능합니다.
+자세한 설명은 https://github.com/google/dagger 에서 확인 가능합니다.
 
-Interface에 구현체를 쉽게 교체하면서 상황에 따라 적절한 행동을 정의할 수 있습니다. 이것은 특히 Mock 객체와 실제 객체를 바꿔가며 테스트 할 때 유용합니다.
-그렇다면 안드로이드에서 DI 구현을 돕는 라이브러리 Dagger에 대해 알아보겠습니다.
-
-자세한 설명은 http://jakewharton.github.io/butterknife 에서 확인 가능합니다.
-
-- build.gradle (Module:app)에서 아래와 같이 추가합니다.
+1. build.gradle (Module:app)에서 아래와 같이 추가합니다.
 
   ```bash
-  
-  android {
-    ...
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-  }
-  
   dependencies {
-    implementation 'com.jakewharton:butterknife:10.1.0'
-    annotationProcessor 'com.jakewharton:butterknife-compiler:10.1.0'
+      ...
+    api 'com.google.dagger:dagger:2.24'
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.24'
   }
-
   ```
-  
-  종속성 추가후 appcompat에서 빨간밑줄로 오류가 날수도있다. 버터나이프도 androidx와의 호환을 위하여 업데이트 된 모양이다.
-  상단의 Refactor -> Migrate to Androidx -> Do Refactor를 해줍니다. 그러고 다시 Sync버튼을 누르면 오류는 사라집니다.
+  위와 같이 종속성을 추가시켜준후에 오른쪽 상단의 Sync now를 클릭해줍니다.
   
   
-- ButterKnife를 적용시키자
+2. Module.class
 
   ```bash
-  
-  protected void onCreate(Bundle savedInstanceState) {
-      super.onCreate(savedInstanceState);
-      setContentView(R.layout.activity_main);
-      ButterKnife.bind(this);
+   @dagger.Module
+   public class Module {
+
+    @Provides
+    Pet provideSomething (Dog d) {
+        return new Pet();
+    }
+    
   }
- 
   ```
-  ButterKnife를 적용시킬 Activity에서 위와같이 한번에 바인딩 해줍니다.
+  의존성 문제를 해결하기 위해 인스턴스를 제공해야 합니다. 그 설정을 하는게 위의과정입니다.
+  클래스 위에 @Module을 붙이고, 인스턴스를 제공하고자 하는것 위에 @Provides을 붙입니다. 
+  @Provides의 반환 값은 주입하고자 하는 것의 형태가 됩니다. 이번에는 Pet 클래스를 주입하고 싶으므로 Pet을 반환값을 합니다.
 
-
-- 전체적인 코드설명 
+3. Component.interface
 
   ```bash
-  
-   public class MainActivity extends AppCompatActivity {
-
-     private static final String TAG = "MainActivity";
-     private int count = 0;
-
-     // 모든 뷰와 리소스들 사용을위해 아래와 같은 방법으로 작성합니다. (= findViewById(R.id)와 같음)
-     
-     @BindView(R.id.textView)
-     TextView textView;
-     
-     @BindViews({ R.id.firstNameTextView, R.id.lastNameTextView })
-     List<TextView> nameTextViews;
-
-     @BindViews({ R.id.button1, R.id.button2, R.id.button3})
-     List<Button> nameButtons;
-
-     @BindString(R.string.app_name)
-     String str;
-
-     @BindView(R.id.imageView)
-     ImageView imageView;
-
-     @BindDrawable(R.drawable.ic_launcher_background)
-     Drawable drawable;
-
-     @Override
-     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        ButterKnife.bind(this);
-        
-        //아래는 Butterknife 라이브러리를 사용하지 않았을때의 코드입니다.
-        //textView = findViewById(R.id.textView);
-        //String str = getResources().getString(R.string.app_name);
-        
-        //바인딩을 시켜준후 아래와 같이 바로 사용가능합니다.
-        textView.setText("blah blah blah...");
-        textView.setText(str);
-        imageView.setImageDrawable(drawable);
-        
-        //List형식으로도 바인딩을 시켜주고 아래와 같이 사용할 수도 있습니다.
-        for( TextView textView : nameTextViews ) {
-            Log.e(TAG, " on Create : " + textView.getText());
-        }
-
-        for( Button button : nameButtons ) {
-            Log.e(TAG, "button : "+button.getText());
-        }
-    }
-
-    //메소드를 지정해줄때도 다음과 같이 사용할수 있습니다. 한개 이상의 리소스를 지정해줄 수 있습니다.
-    
-    @OnClick(R.id.button)
-    void buttonClick() {
-        Toast.makeText(this,"button clicked", Toast.LENGTH_SHORT).show();
-    }
-    
-    @OnLongClick(R.id.button)
-     void onLongClick() {
-        Toast.makeText(this ,"On Long Click",Toast.LENGTH_LONG).show();
-    }
-    
-    @OnTouch({R.id.textView, R.id.firstNameTextView, R.id.lastNameTextView})
-    void onTouch(View view){
-        switch(view.getId()) {
-            case R.id.textView:
-                Toast.makeText(this, "on touch : textView Clicked" , Toast.LENGTH_SHORT).show();
-                break;
-            case R.id.firstNameTextView:
-                Toast.makeText(this, "on touch : firstNameTextView Clicked" , Toast.LENGTH_SHORT).show();
-                break;
-            case R.id.lastNameTextView:
-                Toast.makeText(this, "on touch : lastNameTextView Clicked" , Toast.LENGTH_SHORT).show();
-                break;
-        }
-    }
-
-    @OnClick({ R.id.button1, R.id.button2, R.id.button3})
-     void OnCount() {
-        Log.e(TAG, String.valueOf(count));
-        count++;
-    }
+   @dagger.Component(modules = Module.class)
+   public interface Component {
+          void inject(MainActivity mainActivity);
   }
-  
   ```
- 
+ 의존 해결을 하고 싶은 곳과 어떤 모듈을 사용할 것인지 정의합니다.
+ @Component 의 인수로는 사용할 Module 클래스를 설정합니다.
+ inject 메소드를 정의하여 인수에 의존 해결을 하는 클래스를 설정합니다. 위 코드는 MainActivity에서 의존을 해결하고싶은 예입니다.
+ 프로젝트를 재빌드하면 DaggerSampleComponent 클래스가 자동으로 생성되고 사용하시면 됩니다.
   
   
- ### ButterKnife를 쓰고난후 느낀점
- 
-  안드로이드를 사용하면서 어노테이션을 사용할 일이 많이 없어서 어렵게 보였지만 사용하다보니 금방 적응하게되었습니다.
-  그리고 짧게 코딩을 하였지만 확실히 간결하게 보입니다. 복잡한 프로젝트를 진행할때 이런식으로 코드를 사용할 수 있다면
-  조금더 보기좋은 코드가 될수 있을것 같습니다.
+ ### Dagger를 사용하고 느낀점
+  dagger2를 처음접했을때 저에게는 학습비용이 꽤나 높은 개념이였습니다.
+  유용한 많은 기능들이 있고, 위의 예제는 간단한 예시이지만 규모가 커지는 프로젝트에서 dagger는 엄청난 효과를 발휘할 것으로 생각합니다.
